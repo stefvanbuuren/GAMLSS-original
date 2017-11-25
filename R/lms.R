@@ -57,7 +57,7 @@ findPower <- function(y, x, data = NULL,  lim.trans = c(0, 1.5), prof=FALSE, k=2
 {
   cat("*** Checking for transformation for x ***", "\n") 
  ptrans<- function(x, p) if (abs(p)<=0.0001) log(x) else I(x^p)
-      fn <- function(p) GAIC(gamlss(y~pb(ptrans(x,p)), c.crit = c.crit, trace=FALSE), k=k)
+      fn <- function(p) GAIC(gamlss(y~cs(ptrans(x,p)), c.crit = c.crit, trace=FALSE), k=k)
   if (prof) # profile dev
   {
        pp <- seq(lim.trans[1],lim.trans[2], step) 
@@ -73,7 +73,7 @@ findPower <- function(y, x, data = NULL,  lim.trans = c(0, 1.5), prof=FALSE, k=2
     cat('*** power parameters ', par,"***"," \n") 
   } else
   {
-     fn <- function(p) GAIC(gamlss(y~pb(ptrans(x,p)), c.crit = c.crit, trace=FALSE), k=k)
+     fn <- function(p) GAIC(gamlss(y~cs(ptrans(x,p)), c.crit = c.crit, trace=FALSE), k=k)
     par <- optimise(fn, lower=lim.trans[1], upper=lim.trans[2])$minimum
     cat('*** power parameters ', par,"***"," \n") 
   }  
@@ -114,8 +114,8 @@ ptrans<- function(x, p) if (p==0) log(x) else I(x^p)
 ##  fit the model -------------------------------------------------------------- 
     cat('*** Initial  fit***'," \n")   
     switch(method.pb, 
-        "ML"= {m0 <- gamlss(y~pb(x), sigma.formula=~1, data=data, c.crit = 0.01)},
-      "GAIC"= {m0 <- gamlss(y~pb(x, method="GAIC", k=k), sigma.formula=~1, data=data, c.crit = 0.01)}) ## initial fit  finish
+        "ML"= {m0 <- gamlss(y~cs(x, df=mu.df), sigma.formula=~1, data=data, c.crit = 0.01)},
+      "GAIC"= {m0 <- gamlss(y~cs(x, method="GAIC", k=k, df=sigma.df), sigma.formula=~1, data=data, c.crit = 0.01)}) ## initial fit  finish
 ## creating lists etc ----------------------------------------------------------
      failed <- list() 
        fits <- list()
@@ -127,16 +127,16 @@ ptrans<- function(x, p) if (p==0) log(x) else I(x^p)
   {
     cat('*** Fitting', FAM[i], "***","\n")  
      switch(method.pb, 
-         "ML"= { m1 <- try(gamlss(y ~ pb(x, df=mu.df),
-              sigma.formula = ~pb(x, df=sigma.df),
-                 nu.formula = ~pb(x, df=nu.df), 
-                tau.formula = ~pb(x, df=tau.df), 
+         "ML"= { m1 <- try(gamlss(y ~ cs(x, df=mu.df),
+              sigma.formula = ~cs(x, df=sigma.df),
+                 nu.formula = ~cs(x, df=nu.df), 
+                tau.formula = ~cs(x, df=tau.df), 
                 family = FAM[i], data = data,
                ...), silent=TRUE)}, #mu.start = fitted(m0), 
-        "GAIC"= { m1 <- try(gamlss(y ~ pb(x,  method="GAIC", k=k, df=mu.df),
-              sigma.formula = ~pb(x,  method="GAIC", k=k, df=sigma.df),
-                 nu.formula = ~pb(x,  method="GAIC", k=k, df=nu.df), 
-                tau.formula = ~pb(x,  method="GAIC", k=k, df=tau.df), 
+        "GAIC"= { m1 <- try(gamlss(y ~ cs(x,  method="GAIC", k=k, df=mu.df),
+              sigma.formula = ~cs(x,  method="GAIC", k=k, df=sigma.df),
+                 nu.formula = ~cs(x,  method="GAIC", k=k, df=nu.df), 
+                tau.formula = ~cs(x,  method="GAIC", k=k, df=tau.df), 
                 family = FAM[i], data = data,
                ...), silent=TRUE)#  mu.start = fitted(m0), taken out 11-05-17 Mikis
          })      
@@ -161,20 +161,21 @@ if(whichdist==0)
 { # refitting the Normal with sigma  if not of the models is any good
   cat('*** Refitting', "NO", "***","\n")  
   m0 <-  switch(method.pb, 
-                "ML"= {m0 <- gamlss(y~pb(x), sigma.formula=~pb(x), data=data, 
+                "ML"= {m0 <- gamlss(y~cs(x, df=mu.df), 
+                                    sigma.formula=~cs(x, df=sigma.df), data=data, 
                                     c.crit = 0.01)},
-                "GAIC"= {m0 <- gamlss(y~pb(x, method="GAIC", k=k), 
-                              sigma.formula=~pb(x), 
+                "GAIC"= {m0 <- gamlss(y~cs(x, method="GAIC", k=k, df=mu.df), 
+                              sigma.formula=~cs(x, df=sigma.df), 
                         data  =data, c.crit = 0.01)}) ## initial fit  finish
 }
 ## changing the call t look better in the output -------------------------------
 m0$call$mu.start <- NULL # this works OK
     m0$call$data <- substitute(data) # this is OK
   m0$call$family <- if(whichdist==0) "NO" else FAM[whichdist] # this is OK
-  if (is.null(mu.df))    m0$call$formula <- formula(y~pb(x))
-  if (is.null(sigma.df)) m0$call$sigma.formula <- formula(~pb(x))
-  if (is.null(nu.df))    m0$call$nu.formula <- formula(~pb(x))
-  if (is.null(tau.df))   m0$call$tau.formula <- formula(~pb(x))
+  if (is.null(mu.df))    m0$call$formula <- formula(y~cs(x))
+  if (is.null(sigma.df)) m0$call$sigma.formula <- formula(~cs(x))
+  if (is.null(nu.df))    m0$call$nu.formula <- formula(~cs(x))
+  if (is.null(tau.df))   m0$call$tau.formula <- formula(~cs(x))
 # I am stack here
 #m0$call$formula[3] 
 #if (is.null(mu.df)) 
