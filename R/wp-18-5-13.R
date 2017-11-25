@@ -148,7 +148,7 @@ deparen <- function(expr)
     {
      # if (any(grepl("data", names(object$call)))) # new Mikis 25-3-13
       # {
-        DaTa <- get(as.character(object$call["data"])) 
+        DaTa <- eval(object$call$data) 
    DataExist <- TRUE
       # }    
     }
